@@ -30,6 +30,9 @@ void UCFEffectorBlock::TickEffector(float DeltaTime, const FCFEffectorBlockConte
 	const bool bEffectorActive = !bStopped && Context.CurrentSectionTime >= StartTime;
 	if (bEffectorActive)
 	{
+		CurrentRunningTime = Context.CurrentSectionTime - StartTime;
+		
+		//Check the state of the effector and see if we need to activate it or end it.
 		const bool bEffectorDurationExpired = Duration > 0 ? Context.CurrentSectionTime > (StartTime + Duration) : false;
 		const bool bEffectorStartedThisFrame = !bRunning;
 		if (!bEffectorDurationExpired)
@@ -41,7 +44,8 @@ void UCFEffectorBlock::TickEffector(float DeltaTime, const FCFEffectorBlockConte
 
 			//Delta time could actually be zero, in which case this tick was triggered only to simulate activation for effectors that should be enabled right away.
 			//Ignore zeroed delta times for the purposes of the effectors
-			if (DeltaTime > 0.0f)
+			//An effector that stopped itself while starting must not tick on that same frame
+			if (DeltaTime > 0.0f && !bStopped)
 			{
 				OnEffectorTick(DeltaTime, Context);
 			}
@@ -60,7 +64,8 @@ void UCFEffectorBlock::TickEffector(float DeltaTime, const FCFEffectorBlockConte
 
 					//Delta time could actually be zero, in which case this tick was triggered only to simulate activation for effectors that should be enabled right away.
 					//Ignore zeroed delta times for the purposes of the effectors
-					if (DeltaTime > 0.0f)
+					//An effector that stopped itself while starting must not tick on that same frame
+					if (DeltaTime > 0.0f && !bStopped)
 					{
 						OnEffectorTick(DeltaTime, Context);
 					}
@@ -81,6 +86,7 @@ UWorld* UCFEffectorBlock::GetWorld() const
 void UCFEffectorBlock::StartEffector(const FCFEffectorBlockContext& Context)
 {
 	bRunning = true;
+	CurrentRunningTime = 0.f;
 	OnEffectorStart(Context);
 }
 

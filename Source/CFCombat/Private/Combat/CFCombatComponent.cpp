@@ -12,6 +12,7 @@ UCFCombatComponent::UCFCombatComponent()
 	: CurrentSection(nullptr)
 	, CurrentSectionTime(0.0f)
 	, bPendingResetState(false)
+	, bPendingDeactivation(false)
 	, bLockSectionProcessOnChange(false)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
@@ -23,6 +24,9 @@ UCFCombatComponent::UCFCombatComponent()
 void UCFCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//A component that is not active yet waits for Activate to start ticking
+	SetComponentTickEnabled(IsActive());
 
 	//If we have a parameter list, duplicate it so we work on our own copy, even if there's no combat system yet
 	if (SystemParameters)
@@ -63,12 +67,41 @@ void UCFCombatComponent::BeginPlay()
 	}
 }
 
+void UCFCombatComponent::Activate(bool bReset)
+{
+	Super::Activate(bReset);
+
+	//The engine activates auto activate components while registering, before BeginPlay has prepared the combat system. BeginPlay enables the tick by itself in that case
+	if (HasBegunPlay() && IsActive())
+	{
+		SetComponentTickEnabled(true);
+	}
+}
+
+void UCFCombatComponent::Deactivate()
+{
+	const bool bWasActive = IsActive();
+	Super::Deactivate();
+
+	//The cleanup is deferred like every other operation, since this can be called from inside a section (an effector, a condition, a delegate). The tick keeps running until it is applied
+	if (bWasActive && HasBegunPlay())
+	{
+		bPendingDeactivation = true;
+	}
+}
+
 void UCFCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	//Flush any operation needed for update
 	ApplyDeferredOperations();
+
+	//A deactivated combat system processes nothing, the deferred operations above are what turn the tick off
+	if (!IsActive())
+	{
+		return;
+	}
 
 	//Can only run with a combat system attached to this
 	if (CombatSystemInstance)
@@ -91,7 +124,7 @@ void UCFCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 
 void UCFCombatComponent::RegisterActionIntent(UCFActionIntent* Intent)
 {
-	if (Intent)
+	if (Intent && IsActive())
 	{
 		if (IntentBuffers.Num() > 0 || RootIntentBuffer.bBufferOpen)
 		{
@@ -127,7 +160,7 @@ void UCFCombatComponent::RegisterActionIntent(UCFActionIntent* Intent)
 
 void UCFCombatComponent::UnregisterMultiFrameActionIntent(UCFActionIntent* Intent)
 {
-	if (Intent && Intent->GetIntentType() == ECFActionIntentType::MultiFrame)
+	if (Intent && IsActive() && Intent->GetIntentType() == ECFActionIntentType::MultiFrame)
 	{
 		//Remove from any open buffer
 		if (IntentBuffers.Num() > 0 || RootIntentBuffer.bBufferOpen)
@@ -603,6 +636,19 @@ void UCFCombatComponent::ApplyDeferredOperations()
 	{
 		SetCurrentComboSection(nullptr);
 		bPendingResetState = false;
+	}
+
+	if (bPendingDeactivation)
+	{
+		//Close the running section so its effectors end, and discard every intent so nothing held fires when the component is activated again
+		SetCurrentComboSection(nullptr);
+		ClearComboBuffer();
+		RootIntentBuffer.ClearBuffer();
+		OpenActionIntents.Empty();
+		bPendingDeactivation = false;
+
+		//The component could have been activated again before this was applied, in which case it keeps ticking
+		SetComponentTickEnabled(IsActive());
 	}
 
 	for (TWeakObjectPtr<UCFCombatSystem> RemovedSystem : DeferredCombatSystemModifierRemovals)

@@ -78,6 +78,7 @@ class CFCOMBAT_API UCFCombatComponent : public UActorComponent
 	TArray<TWeakObjectPtr<UCFCombatSystem>> DeferredCombatSystemModifierAdditions;
 	TSubclassOf<UCFIntentDriver> DeferredIntentDriverClassChange;
 	bool bPendingResetState;
+	bool bPendingDeactivation;
 
 	/* Static lock used to make sure we can only ever trickle down to one state and avoid infinite recursion. */
 	bool bLockSectionProcessOnChange;
@@ -105,6 +106,12 @@ public:
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	/* Enables the combat system again: the component resumes ticking. The engine also calls this while registering auto activate components, before BeginPlay, where it does nothing. */
+	virtual void Activate(bool bReset = false) override;
+
+	/* Disables the combat system: the running section is closed on the next tick (its effectors end), the intents are discarded and the component stops ticking. Intents are ignored while inactive. */
+	virtual void Deactivate() override;
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

@@ -57,10 +57,6 @@ class CFCOMBAT_API UCFEffectorBlock : public UObject
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effector", meta = (AllowPrivateAccess = "true"))
 	float StartTime;
 
-	/* If > 0, how long this effector lasts before stopping. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effector", meta = (AllowPrivateAccess = "true"))
-	float Duration;
-
 	/* Used for grabbing the context of the world when called. */
 	TWeakObjectPtr<UWorld> CurrentWorldContext;
 
@@ -69,6 +65,15 @@ class CFCOMBAT_API UCFEffectorBlock : public UObject
 
 	/* If this effector is currently running. */
 	bool bRunning;
+	
+	/* The accumulated time this effector has been running. */
+	UPROPERTY(BlueprintReadOnly, Category = "Effector", meta = (AllowPrivateAccess = "true"))
+	float CurrentRunningTime = 0.f;
+	
+protected:
+	/* If > 0, how long this effector lasts before stopping. Protected so subclasses can give themselves a default in their constructor. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effector")
+	float Duration;
 
 public:
 	//ctor
@@ -77,6 +82,7 @@ public:
 	//Getters
 	FORCEINLINE float GetStartTime() const { return StartTime; }
 	FORCEINLINE float GetDuration() const { return Duration; }
+	FORCEINLINE float GetCurrentRunningTime() const { return CurrentRunningTime; }
 
 	/* Clears the effector of any flag and prepares for running. */
 	void InitEffector(const FCFEffectorBlockContext& Context);
@@ -94,7 +100,7 @@ public:
 private:
 	/* Starts the effector and flags it as running. */
 	void StartEffector(const FCFEffectorBlockContext& Context);
-	
+
 protected:
 	/* Called when the effector is initialized, clears every flag that needs to be cleared before running. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Effector")
