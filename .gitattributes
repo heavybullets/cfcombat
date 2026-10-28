@@ -1,0 +1,5 @@
+# Sources are CRLF on Windows; pin it so copy-overs don't produce whole-file diffs
+* text=auto eol=crlf
+*.png binary
+*.uasset binary
+*.umap binary
