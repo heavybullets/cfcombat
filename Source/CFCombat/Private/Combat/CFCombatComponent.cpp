@@ -18,6 +18,9 @@ UCFCombatComponent::UCFCombatComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+
+	//The combat system runs from the start. Unchecking this on an instance makes the component start dormant until it is activated
+	bAutoActivate = true;
 	// ...
 }
 
