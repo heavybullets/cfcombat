@@ -661,10 +661,7 @@ void UCFCombatComponent::ApplyDeferredOperations()
 		{
 			CombatSystemInstance->RemoveModifierCombatSystem(RemovedSystem.Get());
 		}
-	}
-	
-	if (CombatSystemInstance)
-	{
+
 		for (TWeakObjectPtr<UCFCombatSystem> AddedSystem : DeferredCombatSystemModifierAdditions)
 		{
 			CombatSystemInstance->AppendModifierCombatSystem(AddedSystem.Get());
