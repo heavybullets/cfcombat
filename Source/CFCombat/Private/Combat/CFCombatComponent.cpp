@@ -654,14 +654,21 @@ void UCFCombatComponent::ApplyDeferredOperations()
 		SetComponentTickEnabled(IsActive());
 	}
 
-	for (TWeakObjectPtr<UCFCombatSystem> RemovedSystem : DeferredCombatSystemModifierRemovals)
+	//Without an instance (no combat system set) there is nothing to modify, the requests are just discarded below
+	if (CombatSystemInstance)
 	{
-		CombatSystemInstance->RemoveModifierCombatSystem(RemovedSystem.Get());
+		for (TWeakObjectPtr<UCFCombatSystem> RemovedSystem : DeferredCombatSystemModifierRemovals)
+		{
+			CombatSystemInstance->RemoveModifierCombatSystem(RemovedSystem.Get());
+		}
 	}
 	
-	for (TWeakObjectPtr<UCFCombatSystem> AddedSystem : DeferredCombatSystemModifierAdditions)
+	if (CombatSystemInstance)
 	{
-		CombatSystemInstance->AppendModifierCombatSystem(AddedSystem.Get());
+		for (TWeakObjectPtr<UCFCombatSystem> AddedSystem : DeferredCombatSystemModifierAdditions)
+		{
+			CombatSystemInstance->AppendModifierCombatSystem(AddedSystem.Get());
+		}
 	}
 	
 	DeferredCombatSystemModifierRemovals.Empty();
